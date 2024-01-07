@@ -14,41 +14,15 @@ import torch
 from tqdm.auto import tqdm
 from PIL import Image
 
-from relighting.image_processor import pil_square_image
-from relighting.inpainter import BallInpainter
-from relighting.mask_utils import MaskGenerator
-from relighting.ball_processor import get_ideal_normal_ball
-from relighting.utils import name2hash
-import relighting.dist_utils as dist_util
+from diffusionlight.relighting.image_processor import pil_square_image
+from diffusionlight.relighting.inpainter import BallInpainter
+from diffusionlight.relighting.mask_utils import MaskGenerator
+from diffusionlight.relighting.ball_processor import get_ideal_normal_ball
+from diffusionlight.relighting.utils import name2hash
+import diffusionlight.relighting.dist_utils as dist_util
+from diffusionlight.relighting.argument import ( SD_MODELS, CONTROLNET_MODELS)
 
-
-# cross import from inpaint_multi-illum.py
-from relighting.argument import ( SD_MODELS, CONTROLNET_MODELS)
-
-
-def get_ball_location(image_data, args):
-    if 'boundary' in image_data:
-        # support predefined boundary if need
-        x = image_data["boundary"]["x"]
-        y = image_data["boundary"]["y"]
-        r = image_data["boundary"]["size"]
-        
-        # support ball dilation
-        half_dilate = args.ball_dilate // 2
-
-        # check if not left out-of-bound
-        if x - half_dilate < 0: x += half_dilate
-        if y - half_dilate < 0: y += half_dilate
-
-        # check if not right out-of-bound
-        if x + r + half_dilate > args.img_width: x -= half_dilate
-        if y + r + half_dilate > args.img_height: y -= half_dilate   
-            
-    else:
-        # we use top-left corner notation
-        x, y, r = ((args.img_width // 2) - (args.ball_size // 2), (args.img_height // 2) - (args.ball_size // 2), args.ball_size)
-    return x, y, r
-
+from diffusionlight.ball2envmap import process_image as ball2envmap
 
 def interpolate_embedding(pipe, args):
     print("interpolate embedding...")
@@ -77,7 +51,7 @@ def interpolate_embedding(pipe, args):
     return dict(zip(ev_list, interpolate_embeds))
 
 
-def main():
+if __name__ == "__main__":
     # load arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", "-i", type=str, required=True ,help='input image') #dataset name or directory 
@@ -218,6 +192,7 @@ def main():
     output_raw_path = output_basename + "_raw.png"
     output_square_path = output_basename + "_square.png"
     output_control_path = output_basename + "_control.png"
+    output_envmap_path = output_basename + "_envmap.png"
 
     # load input image
     input_image = Image.open(input_path)
@@ -228,33 +203,12 @@ def main():
     else:
         input_image = input_image.resize(resolution)
 
-    # # load dataset
-    # dataset = GeneralLoader(
-    #     root=args.dataset,
-    #     resolution=(args.img_width, args.img_height),
-    #     force_square=args.force_square,
-    #     return_dict=True,
-    #     random_shuffle=False,
-    #     process_id=0,
-    #     process_total=1,
-    #     limit_input=0,
-    # )
-
     # interpolate embedding
     embedding_dict = interpolate_embedding(pipe, args)
     
     # prepare mask and normal ball
     mask_generator = MaskGenerator()
     normal_ball, mask_ball = get_ideal_normal_ball(size=args.ball_size+args.ball_dilate)
-    
-    # # make output directory if not exist
-    # raw_output_dir = os.path.join(args.output_dir, "raw")
-    # control_output_dir = os.path.join(args.output_dir, "control")
-    # square_output_dir = os.path.join(args.output_dir, "square")
-    # os.makedirs(args.output_dir, exist_ok=True)    
-    # os.makedirs(raw_output_dir, exist_ok=True)
-    # os.makedirs(control_output_dir, exist_ok=True)
-    # os.makedirs(square_output_dir, exist_ok=True)
     
     # create split seed
     # please DO NOT manual replace this line, use --seed option instead
@@ -293,10 +247,6 @@ def main():
                 seed = int(seed)
                 # outpng = f"{outname}_seed{seed}.png"
                 cache_name = f"{outname}_seed{seed}"
-
-            # # skip if file exist, useful for resuming
-            # if os.path.exists(os.path.join(square_output_dir, outpng)):
-            #     continue
 
             generator = torch.Generator().manual_seed(seed)
             kwargs = {
@@ -339,21 +289,17 @@ def main():
             else:
                 raise NotImplementedError(f"Unknown algorithm {args.algorithm}")
             
-            
             square_image = output_image.crop((x, y, x+r, y+r))
 
             # return the most recent control_image for sanity check
             control_image = pipe.get_cache_control_image()
             if control_image is not None:
-                # control_image.save(os.path.join(control_output_dir, outpng))
                 control_image.save(output_control_path)
             
             # save image 
-            # output_image.save(os.path.join(raw_output_dir, outpng))
             output_image.save(output_raw_path)
-            # square_image.save(os.path.join(square_output_dir, outpng))
             square_image.save(output_square_path)
 
-                          
-if __name__ == "__main__":
-    main()
+            ball2envmap(output_square_path, output_envmap_path, envmap_height=args.ball_size, scale=4)
+
+

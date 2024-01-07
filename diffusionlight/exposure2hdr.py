@@ -9,17 +9,6 @@ import skimage
 import ezexr
 from relighting.tonemapper import TonemapHDR
 
-def create_argparser():    
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, required=True, help='directory that contain the image') #dataset name or directory 
-    parser.add_argument("--output_dir", type=str, required=True, help='directory that contain the image') #dataset name or directory 
-    parser.add_argument("--endwith", type=str, default=".png" ,help='file ending to filter out unwant image')
-    parser.add_argument("--ev_string", type=str, default="_ev" ,help='string that use for search ev value')
-    parser.add_argument("--EV", type=str, default="0, -2.5, -5" ,help='avalible ev value')
-    parser.add_argument("--gamma", default=2.4, help="Gamma value", type=float)
-    parser.add_argument('--preview_output', dest='preview_output', action='store_true')
-    parser.set_defaults(preview_output=False)
-    return parser
 
 def parse_filename(ev_string, endwith,filename):
     a = filename.split(ev_string)
@@ -31,6 +20,7 @@ def parse_filename(ev_string, endwith,filename):
         'ev': ev,
         'filename': filename
     }
+
 
 def process_image(args, info):
     
@@ -99,9 +89,19 @@ def process_image(args, info):
         skimage.io.imsave(os.path.join(preview_dir, name+".png"), skimage.img_as_ubyte(bracket))
     return None
 
-def main():
+
+if __name__ == "__main__":
     # load arguments
-    args = create_argparser().parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", type=str, required=True, help='directory that contain the image') #dataset name or directory 
+    parser.add_argument("--output", type=str, required=True, help='directory that contain the image') #dataset name or directory 
+    parser.add_argument("--endwith", type=str, default=".png" ,help='file ending to filter out unwant image')
+    parser.add_argument("--ev_string", type=str, default="_ev" ,help='string that use for search ev value')
+    parser.add_argument("--EV", type=str, default="0, -2.5, -5" ,help='avalible ev value')
+    parser.add_argument("--gamma", default=2.4, help="Gamma value", type=float)
+    parser.add_argument('--preview_output', dest='preview_output', action='store_true')
+    parser.set_defaults(preview_output=False)
+    args = parser.parse_args()
     
     files = sorted(os.listdir(args.input_dir))
     
@@ -132,8 +132,3 @@ def main():
     fn = partial(process_image, args)
     with Pool(8) as p:
         r = list(tqdm(p.imap(fn, infolist), total=len(infolist)))
-
-     
-    
-if __name__ == "__main__":
-    main()

@@ -4,7 +4,7 @@ except:
     pass
 import numpy as np
 from PIL import Image
-from relighting.ball_processor import get_ideal_normal_ball
+from diffusionlight.relighting.ball_processor import get_ideal_normal_ball
 
 def create_grid(image_size, n_ball, size):
     height, width = image_size

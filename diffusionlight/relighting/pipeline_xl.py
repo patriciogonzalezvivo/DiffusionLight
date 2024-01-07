@@ -7,7 +7,7 @@ from diffusers.pipelines.controlnet import MultiControlNetModel
 from diffusers import StableDiffusionXLControlNetInpaintPipeline
 from diffusers.image_processor import PipelineImageInput
 from diffusers.pipelines.stable_diffusion_xl.pipeline_output import StableDiffusionXLPipelineOutput
-from relighting.pipeline_utils import custom_prepare_latents, custom_prepare_mask_latents, rescale_noise_cfg
+from diffusionlight.relighting.pipeline_utils import custom_prepare_latents, custom_prepare_mask_latents, rescale_noise_cfg
 
 class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlNetInpaintPipeline):
     @torch.no_grad()

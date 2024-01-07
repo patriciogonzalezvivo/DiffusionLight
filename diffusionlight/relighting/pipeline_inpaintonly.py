@@ -6,7 +6,7 @@ from diffusers import StableDiffusionInpaintPipeline, StableDiffusionXLInpaintPi
 from diffusers.models import AsymmetricAutoencoderKL
 from diffusers.pipelines.stable_diffusion.pipeline_output import StableDiffusionPipelineOutput
 from diffusers.pipelines.stable_diffusion_xl.pipeline_output import StableDiffusionXLPipelineOutput
-from relighting.pipeline_utils import custom_prepare_latents, custom_prepare_mask_latents, rescale_noise_cfg
+from diffusionlight.relighting.pipeline_utils import custom_prepare_latents, custom_prepare_mask_latents, rescale_noise_cfg
 
 class CustomStableDiffusionInpaintPipeline(StableDiffusionInpaintPipeline):
     @torch.no_grad()
